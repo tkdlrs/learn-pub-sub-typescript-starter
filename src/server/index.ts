@@ -1,21 +1,12 @@
 import amqp from 'amqplib';
 import process from 'node:process';
-import { publishJSON } from '../internal/pubsub/publishjson.js';
+import { publishJSON } from '../internal/pubsub/publish.js';
 import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
 //
 async function main() {
-    console.log('Starting Peril server...');
-    //
     const rabbitConnString = 'amqp://guest:guest@localhost:5672/';
     const conn = await amqp.connect(rabbitConnString);
-    const confirmCannel = await conn.createConfirmChannel();
-    console.log(`Peril game server connect to RabbitMQ was successful`);
-    //
-    publishJSON(confirmCannel, ExchangePerilDirect, PauseKey, {
-        isPaused: true,
-    });
-    //
-    //
+    console.log(`Peril game server connected to RabbitMQ!`);
     //
     ['SIGINT', 'SIGTERM'].forEach((signal) => {
         process.on(signal, async () => {
@@ -31,6 +22,16 @@ async function main() {
             }
         });
     });
+    //
+    const publishCh = await conn.createConfirmChannel();
+    try {
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+            isPaused: true,
+        });
+    } catch (err) {
+        console.error(`Error publishing message: ${err}`);
+    }
+    //
 }
 
 main().catch((err) => {
