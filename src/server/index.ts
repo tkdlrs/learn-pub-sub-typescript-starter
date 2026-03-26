@@ -48,34 +48,33 @@ async function main() {
     const publishCh = await conn.createConfirmChannel();
     //
     printServerHelp();
-    aLoop: while (true) {
-        const arrWords = await getInput();
-        if (arrWords.length === 0) {
+    while (true) {
+        const words = await getInput();
+        if (words.length === 0) {
             continue;
         }
         //
-        const firstWord = arrWords[0];
-        console.log(`firstWord: ${firstWord}`);
+        const command = words[0];
         //
-        switch (firstWord) {
+        switch (command) {
             case 'pause':
+                console.log(`Publishing paused game state`);
                 await pauseAction(publishCh);
                 break;
             case 'resume':
+                console.log(`Publishing resumed game state`);
                 await resumeAction(publishCh);
                 break;
             case 'quit':
-                console.log('I am out of here');
-                break aLoop;
+                console.log(`Goodbye!`);
+                process.exit(0);
+                break;
             default:
-                console.log(`I don't understand...`);
+                console.log(`Unknown command`);
                 break;
         }
         //
     }
-    return;
-    //
-
     //
 }
 
