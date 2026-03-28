@@ -1,8 +1,14 @@
 import amqp from 'amqplib';
 import process from 'node:process';
 import { publishJSON } from '../internal/pubsub/publish.js';
-import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
+import {
+    ExchangePerilDirect,
+    ExchangePerilTopic,
+    GameLogSlug,
+    PauseKey,
+} from '../internal/routing/routing.js';
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js';
+import { declareAndBind, SimpleQueueType } from '../internal/pubsub/consume.js';
 //
 async function pauseAction(channel: amqp.ConfirmChannel): Promise<void> {
     try {
@@ -44,6 +50,15 @@ async function main() {
             }
         });
     });
+    //
+    await declareAndBind(
+        conn,
+        ExchangePerilTopic,
+        GameLogSlug,
+        `game_logs.*`,
+        SimpleQueueType.Durable,
+    );
+
     //
     const publishCh = await conn.createConfirmChannel();
     //
