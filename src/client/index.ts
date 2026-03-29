@@ -7,12 +7,18 @@ import {
     printQuit,
 } from '../internal/gamelogic/gamelogic.js';
 import { declareAndBind, SimpleQueueType } from '../internal/pubsub/consume.js';
-import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
+import {
+    ExchangePerilDirect,
+    ExchangePerilTopic,
+    PauseKey,
+} from '../internal/routing/routing.js';
 import { GameState } from '../internal/gamelogic/gamestate.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
 import { commandMove } from '../internal/gamelogic/move.js';
 import { subscribeJSON } from '../internal/pubsub/consume.js';
-import { handlerPause } from './handlers.js';
+import { handlerMove, handlerPause } from './handlers.js';
+import { publishJSON } from '../internal/pubsub/publish.js';
+import { channel } from 'diagnostics_channel';
 //
 
 //
@@ -55,6 +61,16 @@ async function main() {
         handlerPause(gs),
     );
     //
+    await subscribeJSON(
+        conn,
+        ExchangePerilTopic,
+        `army_moves.${username}`,
+        `army_moves.*`,
+        SimpleQueueType.Transient,
+        handlerMove(gs),
+    );
+    const publishCh = await conn.createConfirmChannel();
+    // REPL
     while (true) {
         const words = await getInput();
         if (words.length === 0) {
@@ -66,7 +82,13 @@ async function main() {
         switch (command) {
             case 'move':
                 try {
-                    commandMove(gs, words);
+                    const move = commandMove(gs, words);
+                    await publishJSON(
+                        publishCh,
+                        ExchangePerilTopic,
+                        `army_moves.${username}`,
+                        move,
+                    );
                 } catch (err) {
                     console.log((err as Error).message);
                 }
