@@ -8,6 +8,7 @@ import {
 } from '../internal/gamelogic/gamelogic.js';
 import { declareAndBind, SimpleQueueType } from '../internal/pubsub/consume.js';
 import {
+    ArmyMovesPrefix,
     ExchangePerilDirect,
     ExchangePerilTopic,
     PauseKey,
@@ -18,7 +19,6 @@ import { commandMove } from '../internal/gamelogic/move.js';
 import { subscribeJSON } from '../internal/pubsub/consume.js';
 import { handlerMove, handlerPause } from './handlers.js';
 import { publishJSON } from '../internal/pubsub/publish.js';
-import { channel } from 'diagnostics_channel';
 //
 
 //
@@ -41,35 +41,37 @@ async function main() {
     });
     //
     const username = await clientWelcome();
+    const gs = new GameState(username);
+    const publishCh = await conn.createConfirmChannel();
     //
-    await declareAndBind(
+    // NOT SURE WHEN THIS DIED...
+    // await declareAndBind(
+    //     conn,
+    //     ExchangePerilDirect,
+    //     `${PauseKey}.${username}`,
+    //     PauseKey,
+    //     SimpleQueueType.Transient,
+    // );
+    // //
+    //
+    await subscribeJSON(
+        conn,
+        ExchangePerilTopic,
+        `${ArmyMovesPrefix}.${username}`,
+        `${ArmyMovesPrefix}.*`,
+        SimpleQueueType.Transient,
+        handlerMove(gs),
+    );
+    //
+    await subscribeJSON(
         conn,
         ExchangePerilDirect,
         `${PauseKey}.${username}`,
         PauseKey,
         SimpleQueueType.Transient,
-    );
-    //
-    const gs = new GameState(username);
-    //
-    await subscribeJSON(
-        conn,
-        ExchangePerilDirect,
-        `pause.${username}`,
-        PauseKey,
-        SimpleQueueType.Transient,
         handlerPause(gs),
     );
     //
-    await subscribeJSON(
-        conn,
-        ExchangePerilTopic,
-        `army_moves.${username}`,
-        `army_moves.*`,
-        SimpleQueueType.Transient,
-        handlerMove(gs),
-    );
-    const publishCh = await conn.createConfirmChannel();
     // REPL
     while (true) {
         const words = await getInput();
@@ -83,10 +85,10 @@ async function main() {
             case 'move':
                 try {
                     const move = commandMove(gs, words);
-                    await publishJSON(
+                    publishJSON(
                         publishCh,
                         ExchangePerilTopic,
-                        `army_moves.${username}`,
+                        `${ArmyMovesPrefix}.${username}`,
                         move,
                     );
                 } catch (err) {
