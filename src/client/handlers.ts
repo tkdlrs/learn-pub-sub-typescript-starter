@@ -56,10 +56,8 @@ export function handlerMove(
                         console.error(
                             `Error publishing war recognitions: ${err}`,
                         );
+                        //
                         return AckType.NackRequeue;
-                    } finally {
-                        // This is the scaarie
-                        // return AckType.NackRequeue;
                     }
                 default:
                     return AckType.NackDiscard;
