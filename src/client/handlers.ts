@@ -50,13 +50,16 @@ export function handlerMove(
                             `${WarRecognitionsPrefix}.${gs.getUsername()}`,
                             rw,
                         );
+                        //
+                        return AckType.Ack;
                     } catch (err) {
                         console.error(
                             `Error publishing war recognitions: ${err}`,
                         );
+                        return AckType.NackRequeue;
                     } finally {
                         // This is the scaarie
-                        return AckType.NackRequeue;
+                        // return AckType.NackRequeue;
                     }
                 default:
                     return AckType.NackDiscard;
