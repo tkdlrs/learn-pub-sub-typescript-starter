@@ -16,6 +16,7 @@ import {
     WarRecognitionsPrefix,
 } from '../internal/routing/routing.js';
 import { handleWar, WarOutcome } from '../internal/gamelogic/war.js';
+import { publishGameLog } from './index.js';
 
 //
 export function handlerPause(gs: GameState): (ps: PlayingState) => AckType {
@@ -70,11 +71,12 @@ export function handlerMove(
 //
 export function handlerWar(
     gs: GameState,
+    ch: ConfirmChannel,
 ): (war: RecognitionOfWar) => Promise<AckType> {
     return async (war: RecognitionOfWar): Promise<AckType> => {
         try {
             const outcome = handleWar(gs, war);
-            //
+            // mange outcome
             switch (outcome.result) {
                 case WarOutcome.NotInvolved:
                     return AckType.NackRequeue;
@@ -82,7 +84,29 @@ export function handlerWar(
                     return AckType.NackDiscard;
                 case WarOutcome.OpponentWon:
                 case WarOutcome.YouWon:
+                    try {
+                        await publishGameLog(
+                            ch,
+                            gs.getUsername(),
+                            `${outcome.winner} won a ware against ${outcome.loser}`,
+                        );
+                    } catch (err) {
+                        console.error(`Error publishing game log: ${err}`);
+                        return AckType.NackRequeue;
+                    }
+                    //
+                    return AckType.Ack;
                 case WarOutcome.Draw:
+                    try {
+                        await publishGameLog(
+                            ch,
+                            gs.getUsername(),
+                            `A War between ${outcome.attacker} and ${outcome.defender} resulted in a draw`,
+                        );
+                    } catch (err) {
+                        console.error(`Error publishing game log: ${err}`);
+                        return AckType.NackRequeue;
+                    }
                     return AckType.Ack;
                 default:
                     const unreachable: never = outcome;
