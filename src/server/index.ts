@@ -8,7 +8,12 @@ import {
     PauseKey,
 } from '../internal/routing/routing.js';
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js';
-import { declareAndBind, SimpleQueueType } from '../internal/pubsub/consume.js';
+import {
+    declareAndBind,
+    SimpleQueueType,
+    subscribeMsgPack,
+} from '../internal/pubsub/consume.js';
+import { handlerLog } from './handlers.js';
 //
 async function pauseAction(channel: amqp.ConfirmChannel): Promise<void> {
     try {
@@ -51,16 +56,16 @@ async function main() {
         });
     });
     //
-    await declareAndBind(
+    const publishCh = await conn.createConfirmChannel();
+    //
+    subscribeMsgPack(
         conn,
         ExchangePerilTopic,
         GameLogSlug,
         `game_logs.*`,
         SimpleQueueType.Durable,
+        handlerLog(),
     );
-
-    //
-    const publishCh = await conn.createConfirmChannel();
     //
     printServerHelp();
     while (true) {
