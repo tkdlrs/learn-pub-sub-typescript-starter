@@ -3,10 +3,15 @@ import {
     clientWelcome,
     commandStatus,
     getInput,
+    getMaliciousLog,
     printClientHelp,
     printQuit,
 } from '../internal/gamelogic/gamelogic.js';
-import { SimpleQueueType, subscribeJSON } from '../internal/pubsub/consume.js';
+import {
+    declareAndBind,
+    SimpleQueueType,
+    subscribeJSON,
+} from '../internal/pubsub/consume.js';
 import {
     ArmyMovesPrefix,
     ExchangePerilDirect,
@@ -112,7 +117,27 @@ async function main() {
                 printQuit();
                 process.exit(0);
             case 'spam':
-                console.log(`Spamming not allowed yet!`);
+                try {
+                    const count = Number(words[1]);
+                    if (!count || isNaN(count)) {
+                        throw new Error(
+                            `A number was not provided for Count  `,
+                        );
+                    }
+                    //
+                    for (let i = 0; i < count; i++) {
+                        //
+                        const badLog = getMaliciousLog();
+                        publishJSON(
+                            publishCh,
+                            ExchangePerilTopic,
+                            `${GameLogSlug}.${username}`,
+                            badLog,
+                        );
+                    }
+                } catch (err) {
+                    console.log((err as Error).message);
+                }
                 break;
             default:
                 console.log(`Unknown command: "${command}"`);
