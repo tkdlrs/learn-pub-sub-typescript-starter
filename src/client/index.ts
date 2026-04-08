@@ -117,27 +117,38 @@ async function main() {
                 printQuit();
                 process.exit(0);
             case 'spam':
-                try {
-                    const count = Number(words[1]);
-                    if (!count || isNaN(count)) {
-                        throw new Error(
-                            `A number was not provided for Count  `,
-                        );
-                    }
-                    //
-                    for (let i = 0; i < count; i++) {
-                        //
-                        const badLog = getMaliciousLog();
-                        publishJSON(
-                            publishCh,
-                            ExchangePerilTopic,
-                            `${GameLogSlug}.${username}`,
-                            badLog,
-                        );
-                    }
-                } catch (err) {
-                    console.log((err as Error).message);
+                if (words.length < 2) {
+                    console.log('usage: spam <n>');
+                    continue;
                 }
+                //
+                const raw = words[1];
+                if (!raw) {
+                    console.log(`usage: spam <n>`);
+                    continue;
+                }
+                //
+                const n = parseInt(raw, 10);
+                if (isNaN(n)) {
+                    console.log(`error: ${words[1]} is not a valid number`);
+                    continue;
+                }
+                //
+                for (let i = 0; i < n; i++) {
+                    try {
+                        await publishGameLog(
+                            publishCh,
+                            gs.getUsername(),
+                            getMaliciousLog(),
+                        );
+                    } catch (err) {
+                        console.error(
+                            `Failed to publish spam message: ${(err as Error).message}`,
+                        );
+                        continue;
+                    }
+                }
+                console.log(`Published ${n} malicious logs`);
                 break;
             default:
                 console.log(`Unknown command: "${command}"`);
